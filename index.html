@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Follow the Money — Proof of Concept</title>
+<meta name="description" content="Interactive proof of concept for a research-only blockchain payment-tracing agent with a red-team critic and human approval.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="ftm">
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Project 2 · Proof of concept</p>
+    <h1>Follow the Money</h1>
+    <p class="lede">An agent that follows ransomware and scam payments hop by hop across a blockchain, under a fixed budget — then a red-team critic challenges every claim and a <strong>human</strong> approves the report. Watch it trace below.</p>
+    <div class="notice" role="note">Research prototype. It produces <em>leads for human investigators</em>, not findings of ownership or guilt. Nothing is ever sent to an exchange or authority. The demo graph below is fictional.</div>
+    <nav class="pills">
+      <a href="#trace">Watch a trace</a><a href="#critic">Critic &amp; approval</a><a href="#memory">Case memory</a><a href="#ideas">Tracing ideas</a><a href="#real">Real court case</a><a href="#results">Results</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="trace">
+  <h2>1 · Watch the agent trace a payment</h2>
+  <p class="muted">A ransom lands at the <b>seed</b> address. The goal: reach a labelled service (here, an exchange) that investigators could ask for records. Compare a naive breadth-first search with the agent’s priority search.</p>
+  <div class="card">
+    <div class="row controls">
+      <label>Strategy
+        <select id="strategy">
+          <option value="priority">Priority (agent)</option>
+          <option value="bfs">Breadth-first (naive)</option>
+        </select>
+      </label>
+      <label>API budget <input id="budget" type="range" min="4" max="20" value="12"> <b id="budgetVal">12</b> calls</label>
+      <button id="step" type="button">Step</button>
+      <button id="play" type="button">Play</button>
+      <button id="reset" type="button" class="ghost">Reset</button>
+    </div>
+    <div class="tracebox">
+      <svg id="graph" viewBox="0 0 960 420" role="img" aria-label="Transaction graph being traced"></svg>
+      <aside class="side">
+        <div class="kpi"><span id="calls">0</span><small>calls used</small></div>
+        <div class="kpi"><span id="hops">0</span><small>addresses visited</small></div>
+        <div id="status" class="status">Ready.</div>
+        <h3>Agent log</h3>
+        <ol id="log" class="log"></ol>
+      </aside>
+    </div>
+    <div class="legend small">
+      <span><i class="dot seed"></i>seed</span><span><i class="dot visited"></i>visited</span><span><i class="dot frontier"></i>frontier</span><span><i class="dot svc"></i>labelled service</span><span><i class="dot cj"></i>CoinJoin (no clustering)</span>
+    </div>
+  </div>
+</section>
+
+<section id="critic">
+  <h2>2 · Red-team critic, then a human</h2>
+  <p class="muted">Every claim must cite a transaction ID from recorded evidence. The critic tries to argue each one down; whatever survives goes to a person, who approves or rejects. Run a trace above to fill this in.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>Claims after the critic</h3>
+      <table class="claims"><thead><tr><th>Claim</th><th>Evidence</th><th>Critic</th></tr></thead><tbody id="claims"><tr><td colspan="3" class="muted">No trace yet.</td></tr></tbody></table>
+      <p id="withdrawn" class="small muted"></p>
+    </div>
+    <div class="card">
+      <h3>Human approval</h3>
+      <p class="small muted">Only a separate human approver key can approve. The model that started the trace cannot.</p>
+      <div class="row"><button id="approve" type="button" disabled>Approve report</button><button id="reject" type="button" class="ghost danger" disabled>Reject</button></div>
+      <div id="report" class="report muted small">Awaiting a finished trace.</div>
+    </div>
+  </div>
+</section>
+
+<section id="memory">
+  <h2>3 · “Have we seen this money before?”</h2>
+  <p class="muted">Approved cases are remembered. When a new case — maybe reported in another country — touches an address cluster from an earlier one, the agent says so.</p>
+  <div class="card">
+    <div class="row"><button id="case2" type="button" disabled>Open a second case (different victim)</button></div>
+    <div id="memOut" class="small muted">Approve the first case to enable this.</div>
+  </div>
+</section>
+
+<section id="ideas">
+  <h2>4 · The tracing ideas inside</h2>
+  <div class="grid2">
+    <div class="card idea"><svg viewBox="0 0 300 120"><circle cx="40" cy="35" r="14" class="n v"/><circle cx="40" cy="85" r="14" class="n v"/><rect x="120" y="45" width="60" height="30" rx="6" class="tx"/><circle cx="260" cy="60" r="14" class="n"/><path d="M54,38L120,55M54,82L120,66M180,60L246,60" class="e"/><text x="150" y="105" class="s">inputs spent together</text></svg>
+      <h3>Common-input clustering</h3><p>Coins spent together in one transaction usually share an owner, so their addresses form a wallet. Very large clusters are treated as services and become stopping points, not false links.</p></div>
+    <div class="card idea"><svg viewBox="0 0 300 120"><circle cx="40" cy="60" r="14" class="n v"/><rect x="100" y="45" width="60" height="30" rx="6" class="tx"/><circle cx="250" cy="30" r="14" class="n"/><circle cx="250" cy="90" r="14" class="n chg"/><path d="M54,60L100,60M160,55L236,32M160,66L236,88" class="e"/><text x="250" y="117" class="s">change?</text></svg>
+      <h3>Change detection</h3><p>Senders get leftovers back as “change”. Signals: paying back to one of the sender’s own addresses (strongest), same address type, a non-round amount. Treated as a probability, never a fact.</p></div>
+    <div class="card idea"><svg viewBox="0 0 300 120"><circle cx="25" cy="40" r="11" class="n v"/><circle cx="95" cy="40" r="11" class="n v"/><circle cx="165" cy="40" r="11" class="n v"/><circle cx="235" cy="40" r="11" class="n v"/><circle cx="95" cy="95" r="8" class="n"/><circle cx="165" cy="95" r="8" class="n"/><circle cx="235" cy="95" r="8" class="n"/><path d="M36,40L84,40M106,40L154,40M176,40L224,40M25,51L90,90M95,51L160,90M165,51L230,90" class="e"/></svg>
+      <h3>Peel chains</h3><p>A long chain that peels off a small payment at each hop and sends the rest onward. Common when cashing out stolen funds — and easy to follow once recognised.</p></div>
+    <div class="card idea"><svg viewBox="0 0 300 120"><circle cx="30" cy="20" r="9" class="n"/><circle cx="30" cy="50" r="9" class="n"/><circle cx="30" cy="80" r="9" class="n"/><circle cx="30" cy="108" r="9" class="n"/><rect x="120" y="40" width="60" height="40" rx="6" class="tx cjx"/><circle cx="270" cy="20" r="9" class="n"/><circle cx="270" cy="50" r="9" class="n"/><circle cx="270" cy="80" r="9" class="n"/><circle cx="270" cy="108" r="9" class="n"/><path d="M39,20L120,50M39,50L120,56M39,80L120,64M39,108L120,72M180,50L261,20M180,56L261,50M180,64L261,80M180,72L261,108" class="e"/></svg>
+      <h3>CoinJoin &amp; TRON</h3><p>CoinJoin deliberately mixes many users, so clustering is switched off there. On TRON (USDT) there is no change at all: the agent follows token transfer events and watches Tether’s freeze and unfreeze events.</p></div>
+  </div>
+</section>
+
+<section id="real">
+  <h2>5 · Checked against a real court case</h2>
+  <p class="muted">A public US Department of Justice filing about the 2021 Colonial Pipeline ransom describes this hop. Replaying recorded blockchain data, the tracer reproduced it exactly.</p>
+  <div class="card svgcard">
+    <svg viewBox="0 0 960 200" role="img" aria-label="Recorded hop from the Colonial Pipeline court filing">
+      <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0L10,5L0,10z" class="mk"/></marker></defs>
+      <rect x="20" y="60" width="200" height="70" rx="12" class="b0"/><text x="120" y="90" class="t">Earlier wallet</text><text x="120" y="110" class="s">tx 48388dd0…</text>
+      <rect x="380" y="60" width="200" height="70" rx="12" class="bw"/><text x="480" y="90" class="t">1KmgC5…Pj9D</text><text x="480" y="110" class="s">receives 1.33272285 BTC</text>
+      <rect x="740" y="60" width="200" height="70" rx="12" class="bh"/><text x="840" y="90" class="t">1FUW…</text><text x="840" y="110" class="s">receives 1.2401626 BTC</text>
+      <path d="M220,95H378" class="ar"/><path d="M580,95H738" class="ar"/>
+      <text x="300" y="80" class="s">output #29</text><text x="660" y="80" class="s">tx c903bb55…</text>
+      <text x="480" y="170" class="s">Amounts and transaction IDs match the filing · 7 read-only API requests recorded once · every test replays offline</text>
+    </svg>
+  </div>
+</section>
+
+<section id="results">
+  <h2>6 · Results so far</h2>
+  <div class="grid2">
+    <div class="card"><h3>Queries to reach the endpoint</h3><svg id="qchart" viewBox="0 0 480 200" class="small-svg"></svg><p class="small muted">Synthetic task, budget 32. One task out of three separates the strategies.</p></div>
+    <div class="card"><h3>Priority models: all features vs live-only</h3><svg id="apchart" viewBox="0 0 480 220" class="small-svg"></svg><p class="small muted">Average precision on a synthetic temporal graph (train on past, test on future). One seed. GAT is near chance. Real training data (Elliptic++) is still to come.</p></div>
+  </div>
+</section>
+
+<footer>
+  <p>Source: <a href="https://github.com/raiha-siddiqui/follow-the-money">github.com/raiha-siddiqui/follow-the-money</a> · MIT License · Companion project: <a href="https://github.com/raiha-siddiqui/Polyglot_watchlist">Polyglot Watchlist</a> (multilingual name matching), used to resolve sanctioned-wallet owner names.</p>
+  <p class="muted small">This page is a simplified browser mock-up of the real Python system (LangGraph agent, FastAPI, MCP, Streamlit). The demo graph is fictional. Not affiliated with any law-enforcement agency.</p>
+</footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
